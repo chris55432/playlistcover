@@ -41,7 +41,7 @@ if (loaderTextEl) {
       clearInterval(msgInterval);
       maybeHideLoader();
     }
-  }, 1200);
+  }, 800);
 }
 
 /* -------------------------------------------------- */
