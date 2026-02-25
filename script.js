@@ -8,21 +8,21 @@ const loaderScreen = document.getElementById("loader-screen");
 /* -------------------------------------------------- */
 
 const covers = [
-  "covers/2022_06_JUN.jpg", "covers/2022_07_JLY.jpg", "covers/2022_08_AUG.jpg",
-  "covers/2022_09_SEP.jpg", "covers/2022_10_OCT.jpg", "covers/2022_11_NOV.jpg",
-  "covers/2022_12_DEC.jpg", "covers/2023_01_JAN.jpg", "covers/2023_02_FEB.jpg",
-  "covers/2023_03_MAR.jpg", "covers/2023_04_APL.jpg", "covers/2023_05_MAY.jpg",
-  "covers/2023_06_JUN.jpg", "covers/2023_07_JUL.jpg", "covers/2023_08_AUG.jpg",
-  "covers/2023_09_SEP.jpg", "covers/2023_10_OCT.jpg", "covers/2023_11_NOV.jpg",
-  "covers/2023_12_DEC.jpg", "covers/2024_01_JAN.jpg", "covers/2024_02_FEB.jpg",
-  "covers/2024_03_MAR.jpg", "covers/2024_04_APL.jpg", "covers/2024_05_MAY.jpg",
-  "covers/2024_06_JUN.jpg", "covers/2024_07_JLY.jpg", "covers/2024_08_AUG.jpg",
-  "covers/2024_09_SEP.jpg", "covers/2024_10_OCT.jpg", "covers/2024_11_NOV.jpg",
-  "covers/2024_12_DEC.jpg", "covers/2025_01_JAN.jpg", "covers/2025_02_FEB.jpg",
-  "covers/2025_03_MAR.jpg", "covers/2025_04_APL.jpg", "covers/2025_05_MAY.jpg",
-  "covers/2025_06_JUN.jpg", "covers/2025_07_JLY.jpg", "covers/2025_08_AUG.jpg",
-  "covers/2025_09_SEP.jpg", "covers/2025_10_OCT.jpg", "covers/2025_11_NOV.jpg",
-  "covers/2025_12_DEC.jpg", "covers/2026_01_JAN.jpg", "covers/2026_02_FEB.jpg"
+  "covers/2022_06_JUN.webp", "covers/2022_07_JLY.webp", "covers/2022_08_AUG.webp",
+  "covers/2022_09_SEP.webp", "covers/2022_10_OCT.webp", "covers/2022_11_NOV.webp",
+  "covers/2022_12_DEC.webp", "covers/2023_01_JAN.webp", "covers/2023_02_FEB.webp",
+  "covers/2023_03_MAR.webp", "covers/2023_04_APL.webp", "covers/2023_05_MAY.webp",
+  "covers/2023_06_JUN.webp", "covers/2023_07_JUL.webp", "covers/2023_08_AUG.webp",
+  "covers/2023_09_SEP.webp", "covers/2023_10_OCT.webp", "covers/2023_11_NOV.webp",
+  "covers/2023_12_DEC.webp", "covers/2024_01_JAN.webp", "covers/2024_02_FEB.webp",
+  "covers/2024_03_MAR.webp", "covers/2024_04_APL.webp", "covers/2024_05_MAY.webp",
+  "covers/2024_06_JUN.webp", "covers/2024_07_JLY.webp", "covers/2024_08_AUG.webp",
+  "covers/2024_09_SEP.webp", "covers/2024_10_OCT.webp", "covers/2024_11_NOV.webp",
+  "covers/2024_12_DEC.webp", "covers/2025_01_JAN.webp", "covers/2025_02_FEB.webp",
+  "covers/2025_03_MAR.webp", "covers/2025_04_APL.webp", "covers/2025_05_MAY.webp",
+  "covers/2025_06_JUN.webp", "covers/2025_07_JLY.webp", "covers/2025_08_AUG.webp",
+  "covers/2025_09_SEP.webp", "covers/2025_10_OCT.webp", "covers/2025_11_NOV.webp",
+  "covers/2025_12_DEC.webp", "covers/2026_01_JAN.webp", "covers/2026_02_FEB.webp"
 ];
 
 const WORLD_W = 8000;
@@ -70,7 +70,7 @@ function renderCovers(positions) {
   coverImages = [];
   positions.forEach((pos, i) => {
     const path = covers[i % covers.length];
-    const filename = path.split("/").pop().replace(".jpg", "");
+    const filename = path.split("/").pop().replace(/\.(jpg|webp)$/, "");
 
     const cover = document.createElement("div");
     cover.className = "cover";
@@ -82,16 +82,20 @@ function renderCovers(positions) {
     const img = document.createElement("img");
     img.alt = filename;
     img.draggable = false;
+    cover.classList.add("img-loading");
+    img.addEventListener("load", () => cover.classList.remove("img-loading"));
+    img.addEventListener("error", () => cover.classList.remove("img-loading"));
     if (i === 0) {
       img.src = path;
       img.loading = "eager";
+      if (img.complete) cover.classList.remove("img-loading");
     } else {
       img.dataset.src = path;
       img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
       img.loading = "lazy";
     }
 
-        const shine = document.createElement("div");
+    const shine = document.createElement("div");
     shine.className = "shine";
 
     // ✅ NEW: specular highlight layer (must exist for CSS)
@@ -182,7 +186,7 @@ function renderCovers(positions) {
       delete img.dataset.src;
       preloadObserver.unobserve(e.target);
     }
-  }, { root: viewport, rootMargin: "50%", threshold: 0 });
+  }, { root: viewport, rootMargin: "150%", threshold: 0 });
 
   coverImages.slice(1).forEach(({ img: cover }) => preloadObserver.observe(cover));
 }

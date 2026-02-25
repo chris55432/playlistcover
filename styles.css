@@ -267,8 +267,26 @@ body{
   user-select:none;
   -webkit-user-drag:none;
   isolation:isolate; /* important for blend modes */
-  background:#000;
+  background:#1a1a1a;
   transition:box-shadow .25s ease;
+}
+.cover.img-loading::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:0;
+  background:
+    linear-gradient(90deg, #2a2a2a 1px, transparent 1px),
+    linear-gradient(#2a2a2a 1px, transparent 1px);
+  background-size: 14px 14px;
+  background-color: #1a1a1a;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  filter: blur(3px);
+  opacity: .95;
+}
+.cover.img-loading img{
+  opacity:0;
 }
 
 .cover:focus,
@@ -287,6 +305,9 @@ body{
   pointer-events:none;
   user-select:none;
   -webkit-user-drag:none;
+  position:relative;
+  z-index:1;
+  transition:opacity .3s ease;
 }
 
 /* =========================================
