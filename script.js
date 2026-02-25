@@ -733,7 +733,7 @@ const positions = placeNonOverlapping(covers.length);
 /* Loader: hide when 80%+ images loaded and at least 2 seconds elapsed */
 let imagesLoadedCount = 0;
 const totalCoverImages = positions.length;
-const LOAD_THRESHOLD = 0.6;
+const LOAD_THRESHOLD = 0.5;
 let minTimeElapsed = false;
 
 function maybeHideLoader() {
