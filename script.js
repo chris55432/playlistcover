@@ -85,15 +85,9 @@ function renderCovers(positions) {
     cover.classList.add("img-loading");
     img.addEventListener("load", () => cover.classList.remove("img-loading"));
     img.addEventListener("error", () => cover.classList.remove("img-loading"));
-    if (i === 0) {
-      img.src = path;
-      img.loading = "eager";
-      if (img.complete) cover.classList.remove("img-loading");
-    } else {
-      img.dataset.src = path;
-      img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-      img.loading = "lazy";
-    }
+    img.src = path;
+    img.loading = "eager";
+    if (img.complete) cover.classList.remove("img-loading");
 
     const shine = document.createElement("div");
     shine.className = "shine";
@@ -175,20 +169,6 @@ function renderCovers(positions) {
     world.appendChild(cover);
     coverImages.push({ img: cover, position: pos, index: i, tooltip });
   });
-
-  /* Preload nearby images via Intersection Observer (viewport is scroll root) */
-  const preloadObserver = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      if (!e.isIntersecting) continue;
-      const img = e.target.querySelector("img");
-      if (!img || !img.dataset.src) continue;
-      img.src = img.dataset.src;
-      delete img.dataset.src;
-      preloadObserver.unobserve(e.target);
-    }
-  }, { root: viewport, rootMargin: "150%", threshold: 0 });
-
-  coverImages.slice(1).forEach(({ img: cover }) => preloadObserver.observe(cover));
 }
 
 /* -------------------------------------------------- */
