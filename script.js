@@ -66,7 +66,7 @@ function placeNonOverlapping(count) {
 
 let coverImages = [];
 
-function renderCovers(positions) {
+function renderCovers(positions, onCoverImageLoad) {
   coverImages = [];
   positions.forEach((pos, i) => {
     const path = covers[i % covers.length];
@@ -83,11 +83,17 @@ function renderCovers(positions) {
     img.alt = filename;
     img.draggable = false;
     cover.classList.add("img-loading");
-    img.addEventListener("load", () => cover.classList.remove("img-loading"));
-    img.addEventListener("error", () => cover.classList.remove("img-loading"));
+    const countLoad = () => {
+      if (img.dataset.counted) return;
+      img.dataset.counted = "1";
+      cover.classList.remove("img-loading");
+      onCoverImageLoad && onCoverImageLoad();
+    };
+    img.addEventListener("load", countLoad);
+    img.addEventListener("error", countLoad);
     img.src = path;
     img.loading = "eager";
-    if (img.complete) cover.classList.remove("img-loading");
+    if (img.complete) countLoad();
 
     const shine = document.createElement("div");
     shine.className = "shine";
@@ -646,20 +652,29 @@ window.addEventListener("resize", () => {
 /* -------------------------------------------------- */
 
 const positions = placeNonOverlapping(covers.length);
-renderCovers(positions);
+
+/* Loader: hide when 80%+ images loaded and at least 2 seconds elapsed */
+let imagesLoadedCount = 0;
+const totalCoverImages = positions.length;
+const LOAD_THRESHOLD = 0.8;
+let minTimeElapsed = false;
+
+function maybeHideLoader() {
+  if (!loaderScreen || !minTimeElapsed) return;
+  if (imagesLoadedCount < totalCoverImages * LOAD_THRESHOLD) return;
+  loaderScreen.classList.add("hidden");
+}
+
+function onCoverImageLoad() {
+  imagesLoadedCount++;
+  maybeHideLoader();
+}
+
+renderCovers(positions, onCoverImageLoad);
 coverImages.forEach(({ img }) => enableCover(img));
 
 const lastIdx = covers.length - 1;
 viewport.scrollLeft = positions[lastIdx].x + COVER_W / 2 - viewport.clientWidth / 2;
 viewport.scrollTop  = positions[lastIdx].y + COVER_H / 2 - viewport.clientHeight / 2;
 
-/* Hide loading screen after page load AND at least 3 seconds */
-let pageLoaded = document.readyState === "complete";
-let minTimeElapsed = false;
-function maybeHideLoader() {
-  if (!loaderScreen || !pageLoaded || !minTimeElapsed) return;
-  loaderScreen.classList.add("hidden");
-}
 setTimeout(() => { minTimeElapsed = true; maybeHideLoader(); }, 2000);
-if (pageLoaded) maybeHideLoader();
-else window.addEventListener("load", () => { pageLoaded = true; maybeHideLoader(); });
