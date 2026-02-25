@@ -703,7 +703,7 @@ const positions = placeNonOverlapping(covers.length);
 /* Loader: hide when 80%+ images loaded and at least 2 seconds elapsed */
 let imagesLoadedCount = 0;
 const totalCoverImages = positions.length;
-const LOAD_THRESHOLD = 0.8;
+const LOAD_THRESHOLD = 0.6;
 let minTimeElapsed = false;
 
 function maybeHideLoader() {
@@ -724,4 +724,4 @@ const lastIdx = covers.length - 1;
 viewport.scrollLeft = positions[lastIdx].x + COVER_W / 2 - viewport.clientWidth / 2;
 viewport.scrollTop  = positions[lastIdx].y + COVER_H / 2 - viewport.clientHeight / 2;
 
-setTimeout(() => { minTimeElapsed = true; maybeHideLoader(); }, 2000);
+setTimeout(() => { minTimeElapsed = true; maybeHideLoader(); }, 2500);
