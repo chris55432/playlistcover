@@ -53,6 +53,13 @@ const WORLD_H = 8000;
 const COVER_W = 280;
 const COVER_H = 280;
 const GAP = 24;
+
+function getThumbPath(fullPath) {
+  const parts = fullPath.split("/");
+  const filename = parts.pop();
+  parts.push("thumbs", filename);
+  return parts.join("/");
+}
 const EDGE_MARGIN = 500;
 const MIN_DISTANCE = 100;
 
@@ -92,10 +99,12 @@ let coverImages = [];
 function renderCovers(positions, onCoverImageLoad) {
   coverImages = [];
   positions.forEach((pos, i) => {
-    const path = covers[i % covers.length];
-    const filename = path.split("/").pop().replace(/\.(jpg|webp)$/, "");
+    const fullPath = covers[i % covers.length];
+    const thumbPath = getThumbPath(fullPath);
+    const filename = fullPath.split("/").pop().replace(/\.(jpg|webp)$/, "");
 
     const cover = document.createElement("div");
+    cover.dataset.fullSrc = fullPath;
     cover.className = "cover";
     cover.style.left = pos.x + "px";
     cover.style.top = pos.y + "px";
@@ -113,8 +122,15 @@ function renderCovers(positions, onCoverImageLoad) {
       onCoverImageLoad && onCoverImageLoad();
     };
     img.addEventListener("load", countLoad);
-    img.addEventListener("error", countLoad);
-    img.src = path;
+    img.addEventListener("error", () => {
+      if (img.src !== fullPath) {
+        img.src = fullPath;
+        img.addEventListener("load", countLoad);
+      } else {
+        countLoad();
+      }
+    });
+    img.src = thumbPath;
     img.loading = "eager";
     if (img.complete) countLoad();
 
@@ -447,6 +463,12 @@ function setArtworkGlow(cover) {
 
 function openActive(cover) {
   if (activeCover && activeCover !== cover) closeActive();
+
+  const fullPath = cover.dataset.fullSrc;
+  if (fullPath) {
+    const img = cover.querySelector("img");
+    if (img && img.src.includes("/thumbs/")) img.src = fullPath;
+  }
 
   const rect = cover.getBoundingClientRect();
 
