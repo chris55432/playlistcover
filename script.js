@@ -79,10 +79,16 @@ function renderCovers(positions) {
     cover.tabIndex = i === 0 ? 0 : -1;  /* roving tabindex: only one in tab order, so Tab returns to last focused */
 
     const img = document.createElement("img");
-    img.src = path;
     img.alt = filename;
     img.draggable = false;
-    img.loading = i === 0 ? "eager" : "lazy";
+    if (i === 0) {
+      img.src = path;
+      img.loading = "eager";
+    } else {
+      img.dataset.src = path;
+      img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+      img.loading = "lazy";
+    }
 
         const shine = document.createElement("div");
     shine.className = "shine";
@@ -164,6 +170,20 @@ function renderCovers(positions) {
     world.appendChild(cover);
     coverImages.push({ img: cover, position: pos, index: i, tooltip });
   });
+
+  /* Preload nearby images via Intersection Observer (viewport is scroll root) */
+  const preloadObserver = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      const img = e.target.querySelector("img");
+      if (!img || !img.dataset.src) continue;
+      img.src = img.dataset.src;
+      delete img.dataset.src;
+      preloadObserver.unobserve(e.target);
+    }
+  }, { root: viewport, rootMargin: "50%", threshold: 0 });
+
+  coverImages.slice(1).forEach(({ img: cover }) => preloadObserver.observe(cover));
 }
 
 /* -------------------------------------------------- */
