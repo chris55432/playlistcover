@@ -581,7 +581,7 @@ function closeActive() {
     cover.style.boxShadow = "";
     cover.style.removeProperty("--glow");
     cover._state = null;
-    cover.focus({ preventScroll: false });  /* return focus so Tab/arrows continue from this cover */
+    cover.focus({ preventScroll: true });  /* return focus without scrolling viewport */
   }, 290);
 }
 

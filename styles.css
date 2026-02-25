@@ -534,12 +534,9 @@ body{
     flex-direction:column;
     align-items:center;
     text-align:center;
-    transition:opacity .25s ease, visibility .25s ease;
   }
   body.cover-active #hud{
-    opacity:0;
-    visibility:hidden;
-    pointer-events:none;
+    z-index:1;
   }
   .cover{ width:280px; height:280px; }
   .paper-dots{ background-size:180px 180px, 18px 18px; }
