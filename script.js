@@ -482,6 +482,7 @@ function openActive(cover) {
   setArtworkGlow(cover);
 
   document.body.appendChild(cover);
+  document.body.classList.add("cover-active");
   cover.classList.add("is-active");
   backdrop.hidden = false;
 
@@ -567,6 +568,7 @@ function closeActive() {
     const left = entry ? entry.position.x + "px" : (cover._originalLeft || "");
     const top  = entry ? entry.position.y + "px" : (cover._originalTop || "");
 
+    document.body.classList.remove("cover-active");
     cover.classList.remove("is-active");
     cover.style.position = "";
     cover.style.left = left;
