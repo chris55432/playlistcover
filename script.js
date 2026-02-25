@@ -4,6 +4,29 @@ const backdrop = document.getElementById("backdrop");
 const loaderScreen = document.getElementById("loader-screen");
 
 /* -------------------------------------------------- */
+/* LOADER TEXT LOOP */
+/* -------------------------------------------------- */
+
+const loaderMessages = [
+  "adding colors...",
+  "adding shapes...",
+  "adding chaos...",
+  "adding something nice....",
+  "expanding the world...",
+  "procrastinating a lil bit...",
+  "back to work...",
+  "adding some anxiety..."
+];
+const loaderTextEl = document.getElementById("loader-text");
+if (loaderTextEl) {
+  let msgIdx = 0;
+  setInterval(() => {
+    msgIdx = (msgIdx + 1) % loaderMessages.length;
+    loaderTextEl.textContent = loaderMessages[msgIdx];
+  }, 1200);
+}
+
+/* -------------------------------------------------- */
 /* CONFIG */
 /* -------------------------------------------------- */
 
