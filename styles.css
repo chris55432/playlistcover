@@ -474,8 +474,7 @@ body{
   .sound-logo{ height:30px; }
   #hud .hint{ font-size:11px; }
   #hud .hint-keyboard{ display:none; }
-  .cover-filename{ display:block; }
-  .cover.focused .cover-filename{ opacity:1; }
+  .cover-filename{ display:none !important; }
 }
 
 @media (min-width:601px){
