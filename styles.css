@@ -35,7 +35,12 @@ body{
   display:flex;
   align-items:center;
   justify-content:center;
-  background:var(--bg);
+  background-color:#fff;
+  background-image:
+    radial-gradient(rgba(0,0,0,.18) 1px, transparent 1.5px),
+    radial-gradient(rgba(0,0,0,.10) 1px, transparent 1px);
+  background-size:300px 300px, 30px 30px;
+  background-position:0 0, 0 0;
   transition:opacity .5s ease, visibility .5s ease;
 }
 #loader-screen.hidden{
@@ -549,6 +554,7 @@ body{
   }
   .cover{ width:280px; height:280px; }
   .paper-dots{ background-size:180px 180px, 18px 18px; }
+  #loader-screen{ background-size:180px 180px, 18px 18px; }
   .sound-logo{ height:30px; }
   #hud .hint{ font-size:11px; }
   #hud .hint-keyboard{ display:none; }
