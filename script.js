@@ -8,21 +8,39 @@ const loaderScreen = document.getElementById("loader-screen");
 /* -------------------------------------------------- */
 
 const loaderMessages = [
-  "adding colors...",
-  "adding shapes...",
-  "adding chaos...",
-  "adding something nice....",
-  "expanding the world...",
-  "procrastinating a lil bit...",
-  "back to work...",
-  "adding some anxiety..."
+  "adding imagination",
+  "adding life...",
+  "adding faces...",
+  "adding some love...",
+  "adding some love making...",
+  "adding some colors...",
+  "adding some 脆脆的東西...",
+  "adding some milk...",
+  "adding some anxiety...",
+  "adding some struggles...",
+  "adding some Vancouver...",
+  "adding some Taipei...",
+  "adding some Tokyo...",
+  "adding some Langley...",
+  "adding all the influences...",
+  "adding all the influences...",
+  "adding all the influences...",
+  "adding all the influences...",
+  "adding all the influences...",
 ];
+let allLoaderMessagesShown = false;
 const loaderTextEl = document.getElementById("loader-text");
 if (loaderTextEl) {
   let msgIdx = 0;
-  setInterval(() => {
+  loaderTextEl.textContent = loaderMessages[0];
+  const msgInterval = setInterval(() => {
     msgIdx = (msgIdx + 1) % loaderMessages.length;
     loaderTextEl.textContent = loaderMessages[msgIdx];
+    if (msgIdx === 0) {
+      allLoaderMessagesShown = true;
+      clearInterval(msgInterval);
+      maybeHideLoader();
+    }
   }, 1200);
 }
 
@@ -744,6 +762,7 @@ let minTimeElapsed = false;
 
 function maybeHideLoader() {
   if (!loaderScreen || !minTimeElapsed) return;
+  if (!allLoaderMessagesShown) return;
   if (imagesLoadedCount < totalCoverImages * LOAD_THRESHOLD) return;
   loaderScreen.classList.add("hidden");
 }
@@ -760,4 +779,4 @@ const lastIdx = covers.length - 1;
 viewport.scrollLeft = positions[lastIdx].x + COVER_W / 2 - viewport.clientWidth / 2;
 viewport.scrollTop  = positions[lastIdx].y + COVER_H / 2 - viewport.clientHeight / 2;
 
-setTimeout(() => { minTimeElapsed = true; maybeHideLoader(); }, 2500);
+setTimeout(() => { minTimeElapsed = true; maybeHideLoader(); }, 10000);
