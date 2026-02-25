@@ -75,12 +75,12 @@ body{
 
 #hud{
   position:fixed;
-  top:14px;
-  left:14px;
+  top:20px;
+  left:20px;
   z-index:99998;
 
-  padding:12px 14px;
-  border-radius:18px;
+  padding:20px 30px;
+  border-radius:16px;
 
   /* glass base */
   background: rgba(255,255,255,.14);
