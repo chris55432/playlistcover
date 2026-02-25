@@ -205,8 +205,12 @@ function renderCovers(positions, onCoverImageLoad) {
       tooltip.style.display = "block";
       tooltip.style.left = pos.x + COVER_W / 2 + "px";
       tooltip.style.top = pos.y - 35 + "px";
-      viewport.scrollLeft = pos.x + COVER_W / 2 - viewport.clientWidth / 2;
-      viewport.scrollTop = pos.y + COVER_H / 2 - viewport.clientHeight / 2;
+      if (skipScrollOnFocus) {
+        skipScrollOnFocus = false;
+      } else {
+        viewport.scrollLeft = pos.x + COVER_W / 2 - viewport.clientWidth / 2;
+        viewport.scrollTop = pos.y + COVER_H / 2 - viewport.clientHeight / 2;
+      }
     });
 
     cover.addEventListener("blur", () => {
@@ -346,6 +350,7 @@ function getEnlargeScale() {
 /* -------------------------------------------------- */
 
 let activeCover = null;
+let skipScrollOnFocus = false;
 
 function applyTransform(cover) {
   const st = cover._state;
@@ -611,7 +616,8 @@ function closeActive() {
     cover.style.boxShadow = "";
     cover.style.removeProperty("--glow");
     cover._state = null;
-    cover.focus({ preventScroll: true });  /* return focus without scrolling viewport */
+    skipScrollOnFocus = true;
+    cover.focus({ preventScroll: true });
   }, 290);
 }
 
