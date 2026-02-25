@@ -1,6 +1,7 @@
 const viewport = document.getElementById("viewport");
 const world = document.getElementById("world");
 const backdrop = document.getElementById("backdrop");
+const loaderScreen = document.getElementById("loader-screen");
 
 /* -------------------------------------------------- */
 /* CONFIG */
@@ -667,3 +668,14 @@ coverImages.forEach(({ img }) => enableCover(img));
 const lastIdx = covers.length - 1;
 viewport.scrollLeft = positions[lastIdx].x + COVER_W / 2 - viewport.clientWidth / 2;
 viewport.scrollTop  = positions[lastIdx].y + COVER_H / 2 - viewport.clientHeight / 2;
+
+/* Hide loading screen after page load AND at least 3 seconds */
+let pageLoaded = document.readyState === "complete";
+let minTimeElapsed = false;
+function maybeHideLoader() {
+  if (!loaderScreen || !pageLoaded || !minTimeElapsed) return;
+  loaderScreen.classList.add("hidden");
+}
+setTimeout(() => { minTimeElapsed = true; maybeHideLoader(); }, 2000);
+if (pageLoaded) maybeHideLoader();
+else window.addEventListener("load", () => { pageLoaded = true; maybeHideLoader(); });
