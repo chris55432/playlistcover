@@ -82,7 +82,7 @@ function renderCovers(positions) {
     img.src = path;
     img.alt = filename;
     img.draggable = false;
-    img.loading = "eager";
+    img.loading = i === 0 ? "eager" : "lazy";
 
         const shine = document.createElement("div");
     shine.className = "shine";
