@@ -27,6 +27,36 @@ if (loaderTextEl) {
 }
 
 /* -------------------------------------------------- */
+/* COORD DISPLAY (under HUD) */
+/* -------------------------------------------------- */
+
+const coordDisplay = document.getElementById("coord-display");
+if (coordDisplay && viewport) {
+  let coordX = 0, coordY = 0;
+  const mobileQuery = window.matchMedia("(max-width: 600px)");
+
+  function updateCoordDisplay() {
+    if (mobileQuery.matches) {
+      coordX = Math.round(viewport.scrollLeft + viewport.clientWidth / 2);
+      coordY = Math.round(viewport.scrollTop + viewport.clientHeight / 2);
+    }
+    coordDisplay.textContent = `x: ${coordX} · y: ${coordY}`;
+  }
+
+  document.addEventListener("mousemove", (e) => {
+    if (!mobileQuery.matches) {
+      coordX = e.clientX;
+      coordY = e.clientY;
+      updateCoordDisplay();
+    }
+  });
+  viewport.addEventListener("scroll", updateCoordDisplay);
+  window.addEventListener("resize", updateCoordDisplay);
+  mobileQuery.addEventListener("change", updateCoordDisplay);
+  updateCoordDisplay();
+}
+
+/* -------------------------------------------------- */
 /* CONFIG */
 /* -------------------------------------------------- */
 

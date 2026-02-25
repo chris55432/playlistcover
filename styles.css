@@ -223,6 +223,15 @@ body{
   margin-top:4px;
 }
 
+.coord-display{
+  font-size:11px;
+  color:var(--muted);
+  margin-top:8px;
+  padding-top:8px;
+  border-top:1px solid rgba(26,26,26,.12);
+  font-variant-numeric:tabular-nums;
+}
+
 /* =========================================
    BACKDROP
 ========================================= */
