@@ -339,7 +339,7 @@ function updateCoverTilt(cover, clientX, clientY) {
   const ey = Math.sign(ny) * Math.pow(Math.abs(ny), 1.35);
 
   // tune these
-  const MAX_TILT  = 18; // rotateX/Y
+  const MAX_TILT  = 24; // rotateX/Y
   const MAX_LIFT  = 34; // translateZ
 
   if (over) {
@@ -369,7 +369,7 @@ function updateSpecularFromTilt(cover) {
   const st = cover._state;
   if (!st) return;
 
-  const MAX_TILT = 18; // must match updateCoverTilt
+  const MAX_TILT = 24; // must match updateCoverTilt
 
   // normalize to -1..1
   const nx = clamp(st.ry / MAX_TILT, -1, 1); // left/right tilt
