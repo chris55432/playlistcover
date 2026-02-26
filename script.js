@@ -4,24 +4,224 @@ const backdrop = document.getElementById("backdrop");
 const loaderScreen = document.getElementById("loader-screen");
 
 /* -------------------------------------------------- */
+/* CONFIG (needed early for image loading) */
+/* -------------------------------------------------- */
+
+const covers = [
+  "covers/2022_06_JUN.webp", "covers/2022_07_JLY.webp", "covers/2022_08_AUG.webp",
+  "covers/2022_09_SEP.webp", "covers/2022_10_OCT.webp", "covers/2022_11_NOV.webp",
+  "covers/2022_12_DEC.webp", "covers/2023_01_JAN.webp", "covers/2023_02_FEB.webp",
+  "covers/2023_03_MAR.webp", "covers/2023_04_APL.webp", "covers/2023_05_MAY.webp",
+  "covers/2023_06_JUN.webp", "covers/2023_07_JUL.webp", "covers/2023_08_AUG.webp",
+  "covers/2023_09_SEP.webp", "covers/2023_10_OCT.webp", "covers/2023_11_NOV.webp",
+  "covers/2023_12_DEC.webp", "covers/2024_01_JAN.webp", "covers/2024_02_FEB.webp",
+  "covers/2024_03_MAR.webp", "covers/2024_04_APL.webp", "covers/2024_05_MAY.webp",
+  "covers/2024_06_JUN.webp", "covers/2024_07_JLY.webp", "covers/2024_08_AUG.webp",
+  "covers/2024_09_SEP.webp", "covers/2024_10_OCT.webp", "covers/2024_11_NOV.webp",
+  "covers/2024_12_DEC.webp", "covers/2025_01_JAN.webp", "covers/2025_02_FEB.webp",
+  "covers/2025_03_MAR.webp", "covers/2025_04_APL.webp", "covers/2025_05_MAY.webp",
+  "covers/2025_06_JUN.webp", "covers/2025_07_JLY.webp", "covers/2025_08_AUG.webp",
+  "covers/2025_09_SEP.webp", "covers/2025_10_OCT.webp", "covers/2025_11_NOV.webp",
+  "covers/2025_12_DEC.webp", "covers/2026_01_JAN.webp", "covers/2026_02_FEB.webp"
+];
+
+const WORLD_W = 8000;
+const WORLD_H = 8000;
+const COVER_W = 280;
+const COVER_H = 280;
+const GAP = 24;
+const EDGE_MARGIN = 500;
+const MIN_DISTANCE = 100;
+
+function getThumbPath(fullPath) {
+  const parts = fullPath.split("/");
+  const filename = parts.pop();
+  parts.push("thumbs", filename);
+  return parts.join("/");
+}
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function meetsMinDistance(a, b) {
+  const hGap = Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w));
+  const vGap = Math.max(b.y - (a.y + a.h), a.y - (b.y + b.h));
+  if (hGap < 0 && vGap < 0) return false;
+  const gap = hGap < 0 ? vGap : vGap < 0 ? hGap : Math.min(hGap, vGap);
+  return gap >= MIN_DISTANCE;
+}
+
+function placeNonOverlapping(count) {
+  const placed = [];
+  for (let i = 0; i < count; i++) {
+    for (let t = 0; t < 5000; t++) {
+      const rw = COVER_W + GAP, rh = COVER_H + GAP;
+      const x = Math.random() * (WORLD_W - rw - EDGE_MARGIN * 2) + EDGE_MARGIN;
+      const y = Math.random() * (WORLD_H - rh - EDGE_MARGIN * 2) + EDGE_MARGIN;
+      const rect = { x, y, w: rw, h: rh };
+      if (placed.every(o => meetsMinDistance(rect, o))) {
+        placed.push(rect);
+        break;
+      }
+    }
+  }
+  return placed;
+}
+
+let coverImages = [];
+let imagesLoadedCount = 0;
+let totalCoverImages = 0;
+const LOAD_THRESHOLD = 0.5;
+let minTimeElapsed = false;
+
+function maybeHideLoader() {
+  if (!loaderScreen || !minTimeElapsed) return;
+  if (!allLoaderMessagesShown) return;
+  if (imagesLoadedCount < totalCoverImages * LOAD_THRESHOLD) return;
+  if (loaderMsgInterval) { clearInterval(loaderMsgInterval); loaderMsgInterval = null; }
+  loaderScreen.classList.add("hidden");
+}
+
+function onCoverImageLoad() {
+  imagesLoadedCount++;
+  maybeHideLoader();
+}
+
+function renderCovers(positions, onLoad) {
+  coverImages = [];
+  positions.forEach((pos, i) => {
+    const fullPath = covers[i % covers.length];
+    const thumbPath = getThumbPath(fullPath);
+    const filename = fullPath.split("/").pop().replace(/\.(jpg|webp)$/, "");
+
+    const cover = document.createElement("div");
+    cover.dataset.fullSrc = fullPath;
+    cover.className = "cover";
+    cover.style.left = pos.x + "px";
+    cover.style.top = pos.y + "px";
+    cover.dataset.index = String(i);
+    cover.tabIndex = -1;
+
+    const img = document.createElement("img");
+    img.alt = filename;
+    img.draggable = false;
+    cover.classList.add("img-loading");
+    const countLoad = () => {
+      if (img.dataset.counted) return;
+      img.dataset.counted = "1";
+      cover.classList.remove("img-loading");
+      onLoad && onLoad();
+    };
+    img.addEventListener("load", countLoad);
+    img.addEventListener("error", () => {
+      if (img.src !== fullPath) {
+        img.src = fullPath;
+        img.addEventListener("load", countLoad);
+      } else {
+        countLoad();
+      }
+    });
+    img.src = thumbPath;
+    img.loading = "eager";
+    if (img.complete) countLoad();
+
+    const shine = document.createElement("div");
+    shine.className = "shine";
+    const spec = document.createElement("div");
+    spec.className = "spec";
+
+    const label = document.createElement("div");
+    label.className = "cover-filename";
+    label.textContent = filename;
+
+    cover.appendChild(img);
+    cover.appendChild(shine);
+    cover.appendChild(spec);
+    cover.appendChild(label);
+
+    const tooltip = document.createElement("div");
+    tooltip.className = "cover-tooltip";
+    tooltip.textContent = filename;
+    tooltip.style.display = "none";
+    world.appendChild(tooltip);
+
+    cover.addEventListener("mouseenter", () => {
+      tooltip.style.left = pos.x + COVER_W / 2 + "px";
+      tooltip.style.top = pos.y - 35 + "px";
+      tooltip.style.display = "block";
+    });
+    cover.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
+
+    cover.addEventListener("focus", () => {
+      if (cover.classList.contains("is-active")) return;
+      coverImages.forEach(({ img: c, tooltip: t }) => {
+        c.classList.remove("focused");
+        c.tabIndex = -1;
+        if (t) t.style.display = "none";
+      });
+      cover.classList.add("focused");
+      tooltip.style.display = "block";
+      tooltip.style.left = pos.x + COVER_W / 2 + "px";
+      tooltip.style.top = pos.y - 35 + "px";
+      if (skipScrollOnFocus) {
+        skipScrollOnFocus = false;
+      } else {
+        viewport.scrollLeft = pos.x + COVER_W / 2 - viewport.clientWidth / 2;
+        viewport.scrollTop = pos.y + COVER_H / 2 - viewport.clientHeight / 2;
+      }
+    });
+
+    cover.addEventListener("blur", () => {
+      cover.classList.remove("focused");
+      tooltip.style.display = "none";
+    });
+
+    cover.addEventListener("keydown", (e) => {
+      if (cover.classList.contains("is-active")) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); closeActive(); }
+        return;
+      }
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openActive(cover);
+      }
+      const idx = parseInt(cover.dataset.index, 10);
+      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) {
+        e.preventDefault();
+        let next = idx;
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") next = Math.min(idx + 1, coverImages.length - 1);
+        else next = Math.max(idx - 1, 0);
+        if (next !== idx) coverImages[next].img.focus();
+      }
+    });
+
+    world.appendChild(cover);
+    coverImages.push({ img: cover, position: pos, index: i, tooltip });
+  });
+}
+
+/* Start loading images immediately (while loader displays) */
+const positions = placeNonOverlapping(covers.length);
+totalCoverImages = positions.length;
+renderCovers(positions, onCoverImageLoad);
+
+/* -------------------------------------------------- */
 /* LOADER TEXT LOOP */
 /* -------------------------------------------------- */
 
 const loaderMessages = [
-  "adding imagination",
-  "adding life...",
-  "adding faces...",
+  "adding some imagination",
+  "adding some life...",
+  "adding some faces...",
   "adding some love...",
   "adding some love making...",
   "adding some friends...",
   "adding some colors...",
-  "adding some lemon sour...",
-  "adding some long islan iced tea...",
+  "adding some APE...",
+  "adding some long island iced tea...",
   "adding some 脆脆的東西...",
   "adding some milk...",
   "adding some anxiety...",
-  "adding some struggles...",
-  "adding some Vancouver...",
+  "adding some sweaty palms...",
   "adding some Taipei...",
   "adding some Tokyo...",
   "adding some Langley...",
@@ -32,19 +232,20 @@ const loaderMessages = [
   "adding all the influences...",
 ];
 let allLoaderMessagesShown = false;
+let loaderMsgInterval = null;
 const loaderTextEl = document.getElementById("loader-text");
 if (loaderTextEl) {
   let msgIdx = 0;
   loaderTextEl.textContent = loaderMessages[0];
-  const msgInterval = setInterval(() => {
+  loaderMsgInterval = setInterval(() => {
     msgIdx = (msgIdx + 1) % loaderMessages.length;
     loaderTextEl.textContent = loaderMessages[msgIdx];
     if (msgIdx === 0) {
       allLoaderMessagesShown = true;
-      clearInterval(msgInterval);
+      clearInterval(loaderMsgInterval);
       maybeHideLoader();
     }
-  }, 800);
+  }, 650);
 }
 
 /* -------------------------------------------------- */
@@ -78,197 +279,75 @@ if (coordDisplay && viewport) {
 }
 
 /* -------------------------------------------------- */
-/* CONFIG */
+/* ZOOM (trackpad pinch + mobile pinch only) */
 /* -------------------------------------------------- */
 
-const covers = [
-  "covers/2022_06_JUN.webp", "covers/2022_07_JLY.webp", "covers/2022_08_AUG.webp",
-  "covers/2022_09_SEP.webp", "covers/2022_10_OCT.webp", "covers/2022_11_NOV.webp",
-  "covers/2022_12_DEC.webp", "covers/2023_01_JAN.webp", "covers/2023_02_FEB.webp",
-  "covers/2023_03_MAR.webp", "covers/2023_04_APL.webp", "covers/2023_05_MAY.webp",
-  "covers/2023_06_JUN.webp", "covers/2023_07_JUL.webp", "covers/2023_08_AUG.webp",
-  "covers/2023_09_SEP.webp", "covers/2023_10_OCT.webp", "covers/2023_11_NOV.webp",
-  "covers/2023_12_DEC.webp", "covers/2024_01_JAN.webp", "covers/2024_02_FEB.webp",
-  "covers/2024_03_MAR.webp", "covers/2024_04_APL.webp", "covers/2024_05_MAY.webp",
-  "covers/2024_06_JUN.webp", "covers/2024_07_JLY.webp", "covers/2024_08_AUG.webp",
-  "covers/2024_09_SEP.webp", "covers/2024_10_OCT.webp", "covers/2024_11_NOV.webp",
-  "covers/2024_12_DEC.webp", "covers/2025_01_JAN.webp", "covers/2025_02_FEB.webp",
-  "covers/2025_03_MAR.webp", "covers/2025_04_APL.webp", "covers/2025_05_MAY.webp",
-  "covers/2025_06_JUN.webp", "covers/2025_07_JLY.webp", "covers/2025_08_AUG.webp",
-  "covers/2025_09_SEP.webp", "covers/2025_10_OCT.webp", "covers/2025_11_NOV.webp",
-  "covers/2025_12_DEC.webp", "covers/2026_01_JAN.webp", "covers/2026_02_FEB.webp"
-];
+const ZOOM_MIN = 1;      /* viewport = 100%, can't zoom in further */
+const ZOOM_MAX = 0.35;   /* max zoom out = 35% = see ~3x more world */
+let currentZoom = 1;
 
-const WORLD_W = 8000;
-const WORLD_H = 8000;
-const COVER_W = 280;
-const COVER_H = 280;
-const GAP = 24;
+function applyZoom(newZoom, centerX, centerY) {
+  const oldZoom = currentZoom;
+  newZoom = Math.max(ZOOM_MAX, Math.min(ZOOM_MIN, newZoom));
+  currentZoom = newZoom;
 
-function getThumbPath(fullPath) {
-  const parts = fullPath.split("/");
-  const filename = parts.pop();
-  parts.push("thumbs", filename);
-  return parts.join("/");
-}
-const EDGE_MARGIN = 500;
-const MIN_DISTANCE = 100;
+  const worldX = (centerX + viewport.scrollLeft) / oldZoom;
+  const worldY = (centerY + viewport.scrollTop) / oldZoom;
 
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  world.style.zoom = newZoom;
 
-/* -------------------------------------------------- */
-/* PLACEMENT */
-/* -------------------------------------------------- */
-
-function meetsMinDistance(a, b) {
-  const hGap = Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w));
-  const vGap = Math.max(b.y - (a.y + a.h), a.y - (b.y + b.h));
-  if (hGap < 0 && vGap < 0) return false;
-  const gap = hGap < 0 ? vGap : vGap < 0 ? hGap : Math.min(hGap, vGap);
-  return gap >= MIN_DISTANCE;
+  viewport.scrollLeft = worldX * newZoom - centerX;
+  viewport.scrollTop = worldY * newZoom - centerY;
 }
 
-function placeNonOverlapping(count) {
-  const placed = [];
-  for (let i = 0; i < count; i++) {
-    for (let t = 0; t < 5000; t++) {
-      const rw = COVER_W + GAP, rh = COVER_H + GAP;
-      const x = Math.random() * (WORLD_W - rw - EDGE_MARGIN * 2) + EDGE_MARGIN;
-      const y = Math.random() * (WORLD_H - rh - EDGE_MARGIN * 2) + EDGE_MARGIN;
-      const rect = { x, y, w: rw, h: rh };
-      if (placed.every(o => meetsMinDistance(rect, o))) {
-        placed.push(rect);
-        break;
-      }
+function initZoom() {
+  world.style.zoom = 1;
+
+  /* Trackpad pinch (Ctrl+wheel) */
+  viewport.addEventListener("wheel", (e) => {
+    if (activeCover) { closeActive(); e.preventDefault(); return; }
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const cx = viewport.clientWidth / 2;
+      const cy = viewport.clientHeight / 2;
+      const delta = -e.deltaY * 0.01;
+      applyZoom(currentZoom + delta, cx, cy);
+      return;
     }
-  }
-  return placed;
-}
+    e.preventDefault();
+    viewport.scrollLeft += e.deltaX;
+    viewport.scrollTop += e.deltaY;
+  }, { passive: false });
 
-let coverImages = [];
+  /* Mobile pinch */
+  let pinchStartDist = 0, pinchStartZoom = 1, pinchCenterX = 0, pinchCenterY = 0;
 
-function renderCovers(positions, onCoverImageLoad) {
-  coverImages = [];
-  positions.forEach((pos, i) => {
-    const fullPath = covers[i % covers.length];
-    const thumbPath = getThumbPath(fullPath);
-    const filename = fullPath.split("/").pop().replace(/\.(jpg|webp)$/, "");
+  viewport.addEventListener("touchstart", (e) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[1].clientX - e.touches[0].clientX;
+      const dy = e.touches[1].clientY - e.touches[0].clientY;
+      pinchStartDist = Math.hypot(dx, dy);
+      pinchStartZoom = currentZoom;
+      const rect = viewport.getBoundingClientRect();
+      pinchCenterX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+      pinchCenterY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+    }
+  }, { passive: true });
 
-    const cover = document.createElement("div");
-    cover.dataset.fullSrc = fullPath;
-    cover.className = "cover";
-    cover.style.left = pos.x + "px";
-    cover.style.top = pos.y + "px";
-    cover.dataset.index = String(i);
-    cover.tabIndex = i === 0 ? 0 : -1;  /* roving tabindex: only one in tab order, so Tab returns to last focused */
+  viewport.addEventListener("touchmove", (e) => {
+    if (e.touches.length === 2 && pinchStartDist > 0) {
+      e.preventDefault();
+      const dx = e.touches[1].clientX - e.touches[0].clientX;
+      const dy = e.touches[1].clientY - e.touches[0].clientY;
+      const dist = Math.hypot(dx, dy);
+      const scale = dist / pinchStartDist;
+      applyZoom(pinchStartZoom * scale, pinchCenterX, pinchCenterY);
+    }
+  }, { passive: false });
 
-    const img = document.createElement("img");
-    img.alt = filename;
-    img.draggable = false;
-    cover.classList.add("img-loading");
-    const countLoad = () => {
-      if (img.dataset.counted) return;
-      img.dataset.counted = "1";
-      cover.classList.remove("img-loading");
-      onCoverImageLoad && onCoverImageLoad();
-    };
-    img.addEventListener("load", countLoad);
-    img.addEventListener("error", () => {
-      if (img.src !== fullPath) {
-        img.src = fullPath;
-        img.addEventListener("load", countLoad);
-      } else {
-        countLoad();
-      }
-    });
-    img.src = thumbPath;
-    img.loading = "eager";
-    if (img.complete) countLoad();
-
-    const shine = document.createElement("div");
-    shine.className = "shine";
-
-    // ✅ NEW: specular highlight layer (must exist for CSS)
-    const spec = document.createElement("div");
-    spec.className = "spec";
-
-    const label = document.createElement("div");
-    label.className = "cover-filename";
-    label.textContent = filename;
-
-    cover.appendChild(img);
-    cover.appendChild(shine);
-    cover.appendChild(spec);
-    cover.appendChild(label);
-
-    const tooltip = document.createElement("div");
-    tooltip.className = "cover-tooltip";
-    tooltip.textContent = filename;
-    tooltip.style.display = "none";
-    world.appendChild(tooltip);
-
-    cover.addEventListener("mouseenter", () => {
-      tooltip.style.left = pos.x + COVER_W / 2 + "px";
-      tooltip.style.top = pos.y - 35 + "px";
-      tooltip.style.display = "block";
-    });
-    cover.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
-
-    cover.addEventListener("focus", () => {
-      if (cover.classList.contains("is-active")) return;
-      coverImages.forEach(({ img, tooltip: t }) => {
-        img.classList.remove("focused");
-        img.tabIndex = -1;
-        if (t) t.style.display = "none";
-      });
-      cover.tabIndex = 0;  /* keep this cover as the single tab stop so Tab continues here when returning */
-      cover.classList.add("focused");
-      tooltip.style.display = "block";
-      tooltip.style.left = pos.x + COVER_W / 2 + "px";
-      tooltip.style.top = pos.y - 35 + "px";
-      if (skipScrollOnFocus) {
-        skipScrollOnFocus = false;
-      } else {
-        viewport.scrollLeft = pos.x + COVER_W / 2 - viewport.clientWidth / 2;
-        viewport.scrollTop = pos.y + COVER_H / 2 - viewport.clientHeight / 2;
-      }
-    });
-
-    cover.addEventListener("blur", () => {
-      cover.classList.remove("focused");
-      tooltip.style.display = "none";
-    });
-
-    cover.addEventListener("keydown", (e) => {
-      if (cover.classList.contains("is-active")) {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); closeActive(); }
-        return;
-      }
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        openActive(cover);
-      }
-      const idx = parseInt(cover.dataset.index, 10);
-      if (e.key === "Tab") {
-        const next = Math.max(idx - 1, 0);  /* Tab alone = previous cover */
-        if (next !== idx) {
-          e.preventDefault();
-          coverImages[next].img.focus();
-        }
-        return;
-      }
-      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) {
-        e.preventDefault();
-        let next = idx;
-        if (e.key === "ArrowRight" || e.key === "ArrowDown") next = Math.min(idx + 1, coverImages.length - 1);
-        else next = Math.max(idx - 1, 0);
-        if (next !== idx) coverImages[next].img.focus();
-      }
-    });
-
-    world.appendChild(cover);
-    coverImages.push({ img: cover, position: pos, index: i, tooltip });
-  });
+  viewport.addEventListener("touchend", (e) => {
+    if (e.touches.length < 2) pinchStartDist = 0;
+  }, { passive: true });
 }
 
 /* -------------------------------------------------- */
@@ -312,7 +391,6 @@ function hslToRgb(h, s, l) {
 }
 
 function getAverageColor(img) {
-  // fallback if not ready
   if (!img || !img.complete || !img.naturalWidth) return { r: 128, g: 128, b: 128 };
 
   const canvas = document.createElement("canvas");
@@ -328,8 +406,7 @@ function getAverageColor(img) {
 
     let r=0,g=0,b=0,count=0;
     for (let i = 0; i < data.length; i += 4) {
-      // ignore near-transparent pixels (just in case)
-      const a = data[i+3];
+      const a = data[i + 3];
       if (a < 10) continue;
       r += data[i];
       g += data[i+1];
@@ -342,13 +419,11 @@ function getAverageColor(img) {
     g = Math.floor(g / count);
     b = Math.floor(b / count);
 
-    // Make glow "feel" like the cover: boost saturation + lift midtones a bit
-    const hsl = rgbToHsl(r,g,b);
+    const hsl = rgbToHsl(r, g, b);
     const boosted = hslToRgb(hsl.h, clamp(hsl.s * 1.25, 0, 1), clamp(hsl.l * 1.05, 0, 1));
 
     return boosted;
-  } catch (e) {
-    // Canvas can throw if image is cross-origin without CORS headers
+  } catch {
     return { r: 128, g: 128, b: 128 };
   }
 }
@@ -408,15 +483,13 @@ function animateActive(cover) {
   st.ry += st.vry;
   st.z  += st.vz;
 
-  // NEW: spec highlight follows rx/ry
-updateSpecularFromTilt(cover);
-
-applyTransform(cover);
-cover._anim = requestAnimationFrame(() => animateActive(cover));
-
+  updateSpecularFromTilt(cover);
+  applyTransform(cover);
+  cover._anim = requestAnimationFrame(() => animateActive(cover));
 }
+
 /* -------------------------------------------------- */
-/* REALISTIC TILT + MICRO Z LIFT */
+/* TILT + MICRO Z LIFT */
 /* -------------------------------------------------- */
 
 function updateCoverTilt(cover, clientX, clientY) {
@@ -449,11 +522,8 @@ function updateCoverTilt(cover, clientX, clientY) {
   const MAX_LIFT  = 34; // translateZ
 
   if (over) {
-    // ✅ uniform corner toward cursor
-    st.trx  = (-ey) * MAX_TILT;
-    st.try_ = ( ex) * MAX_TILT;
-
-    // ✅ lift stronger near corners
+    st.trx = (-ey) * MAX_TILT;
+    st.try_ = ex * MAX_TILT;
     st.tz = r * MAX_LIFT;
 
     // holo vars
@@ -475,13 +545,9 @@ function updateSpecularFromTilt(cover) {
   const st = cover._state;
   if (!st) return;
 
-  const MAX_TILT = 24; // must match updateCoverTilt
-
-  // normalize to -1..1
-  const nx = clamp(st.ry / MAX_TILT, -1, 1); // left/right tilt
-  const ny = clamp(st.rx / MAX_TILT, -1, 1); // up/down tilt
-
-  // ✅ move WITH tilt direction (feels like the light is "attached" to the card)
+  const MAX_TILT = 24;
+  const nx = clamp(st.ry / MAX_TILT, -1, 1);
+  const ny = clamp(st.rx / MAX_TILT, -1, 1);
   const hx = 50 + nx * 30;
   const hy = 50 - ny * 30;
 
@@ -503,10 +569,7 @@ function setArtworkGlow(cover) {
   const img = cover.querySelector("img");
   const { r, g, b } = getAverageColor(img);
 
-  // expose to CSS if you want: box-shadow: 0 0 90px var(--glow)
   cover.style.setProperty("--glow", `rgba(${r}, ${g}, ${b}, 0.62)`);
-
-  // JS shadow (stronger + layered)
   const glow1 = `rgba(${r}, ${g}, ${b}, 0.55)`;
   const glow2 = `rgba(${r}, ${g}, ${b}, 0.28)`;
 
@@ -534,7 +597,6 @@ function openActive(cover) {
   cover._originalTop = cover.style.top;
   cover._originalRect = rect;
 
-  // apply glow AFTER rect capture but BEFORE moving is fine
   setArtworkGlow(cover);
 
   document.body.appendChild(cover);
@@ -568,24 +630,15 @@ function openActive(cover) {
   activeCover = cover;
 
   cover._state = {
-    // rotation
-    rx:0, ry:0, rz:0,
-    trx:0, try_:0, trz:0,
-  
-    // parallax translate
-    tx:0, ty:0,
-    ttx:0, tty:0,
-  
-    // lift
-    z:0, tz:0,
-  
-    // positioning
+    rx: 0, ry: 0, rz: 0,
+    trx: 0, try_: 0, trz: 0,
+    tx: 0, ty: 0,
+    ttx: 0, tty: 0,
+    z: 0, tz: 0,
     dx, dy,
-    s:scale,
-  
-    // float
-    floatAmp:6,
-    floatSpeed:0.003
+    s: scale,
+    floatAmp: 6,
+    floatSpeed: 0.003
   };
 
   cover.style.transition = "transform .35s cubic-bezier(.2,.8,.2,1)";
@@ -712,14 +765,6 @@ viewport.addEventListener("pointermove", (e) => {
 document.addEventListener("pointerup", () => { isPanning = false; viewport.style.cursor = "grab"; });
 document.addEventListener("pointercancel", () => { isPanning = false; viewport.style.cursor = "grab"; });
 
-viewport.addEventListener("wheel", (e) => {
-  if (activeCover) { closeActive(); e.preventDefault(); return; }
-  if (e.ctrlKey) return;
-  e.preventDefault();
-  viewport.scrollLeft += e.deltaX;
-  viewport.scrollTop  += e.deltaY;
-}, { passive: false });
-
 world.addEventListener("dragstart", (e) => e.preventDefault());
 
 /* -------------------------------------------------- */
@@ -755,31 +800,12 @@ window.addEventListener("resize", () => {
 /* INIT */
 /* -------------------------------------------------- */
 
-const positions = placeNonOverlapping(covers.length);
-
-/* Loader: hide when 80%+ images loaded and at least 2 seconds elapsed */
-let imagesLoadedCount = 0;
-const totalCoverImages = positions.length;
-const LOAD_THRESHOLD = 0.5;
-let minTimeElapsed = false;
-
-function maybeHideLoader() {
-  if (!loaderScreen || !minTimeElapsed) return;
-  if (!allLoaderMessagesShown) return;
-  if (imagesLoadedCount < totalCoverImages * LOAD_THRESHOLD) return;
-  loaderScreen.classList.add("hidden");
-}
-
-function onCoverImageLoad() {
-  imagesLoadedCount++;
-  maybeHideLoader();
-}
-
-renderCovers(positions, onCoverImageLoad);
 coverImages.forEach(({ img }) => enableCover(img));
 
 const lastIdx = covers.length - 1;
 viewport.scrollLeft = positions[lastIdx].x + COVER_W / 2 - viewport.clientWidth / 2;
 viewport.scrollTop  = positions[lastIdx].y + COVER_H / 2 - viewport.clientHeight / 2;
+
+initZoom();
 
 setTimeout(() => { minTimeElapsed = true; maybeHideLoader(); }, 10000);
