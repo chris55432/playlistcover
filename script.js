@@ -671,11 +671,17 @@ function openActive(cover) {
   cover.classList.add("is-active");
   backdrop.hidden = false;
 
+  /* Use intrinsic size so enlarged view is same size regardless of zoom level */
+  const centerX = window.innerWidth / 2 - COVER_W / 2;
+  const centerY = window.innerHeight / 2 - COVER_H / 2;
+  const origCenterX = rect.left + rect.width / 2;
+  const origCenterY = rect.top + rect.height / 2;
+
   cover.style.position = "fixed";
-  cover.style.left = rect.left + "px";
-  cover.style.top = rect.top + "px";
-  cover.style.width = rect.width + "px";
-  cover.style.height = rect.height + "px";
+  cover.style.left = (origCenterX - COVER_W / 2) + "px";
+  cover.style.top = (origCenterY - COVER_H / 2) + "px";
+  cover.style.width = COVER_W + "px";
+  cover.style.height = COVER_H + "px";
   cover.style.margin = "0";
   cover.style.setProperty("--mx", "50%");
   cover.style.setProperty("--my", "50%");
@@ -688,11 +694,8 @@ function openActive(cover) {
   cover.style.setProperty("--hi", "0.18");  
 
   const scale = getEnlargeScale();
-  const centerX = window.innerWidth / 2 - rect.width / 2;
-  const centerY = window.innerHeight / 2 - rect.height / 2;
-
-  const dx = centerX - rect.left;
-  const dy = centerY - rect.top;
+  const dx = centerX - (origCenterX - COVER_W / 2);
+  const dy = centerY - (origCenterY - COVER_H / 2);
 
   activeCover = cover;
 
