@@ -42,6 +42,70 @@ function getThumbPath(fullPath) {
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+/* -------------------------------------------------- */
+/* EASTCOVER Voting (Supabase) */
+/* -------------------------------------------------- */
+const SUPABASE_PROJECT_URL = "https://bncnrkuvdzzcoqcnovrf.supabase.co";
+const VOTE_ENDPOINT = `${SUPABASE_PROJECT_URL}/functions/v1/vote`;
+const RESULTS_ENDPOINT = `${SUPABASE_PROJECT_URL}/functions/v1/results`;
+const DEVICE_KEY = "eastcover_device_id";
+const CURRENT_VOTE_KEY = "eastcover_current_vote";
+
+function getDeviceId() {
+  let id = localStorage.getItem(DEVICE_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(DEVICE_KEY, id);
+  }
+  return id;
+}
+
+async function voteForCover(coverId) {
+  const device_id = getDeviceId();
+  const res = await fetch(VOTE_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ device_id, cover_id: coverId }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Vote failed (${res.status}): ${text}`);
+  }
+  localStorage.setItem(CURRENT_VOTE_KEY, coverId);
+  return res.json();
+}
+
+async function getResults() {
+  const res = await fetch(RESULTS_ENDPOINT, { method: "GET" });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Results failed (${res.status}): ${text}`);
+  }
+  const data = await res.json();
+  return data.results || [];
+}
+
+function getCurrentVote() {
+  return localStorage.getItem(CURRENT_VOTE_KEY);
+}
+
+function clearLocalVote() {
+  localStorage.removeItem(CURRENT_VOTE_KEY);
+  refreshVoteState();
+  updateLeaderboardUI();
+}
+
+function hasMyVote(coverId) {
+  return getCurrentVote() === coverId;
+}
+
+window.eastcoverVote = { getDeviceId, voteForCover, getResults, getCurrentVote, clearLocalVote };
+
+function getCoverId(cover) {
+  const p = (cover.dataset.fullSrc || "").split("/").pop().replace(/\.(webp|jpg|jpeg|png)$/i, "");
+  return p || String(cover.dataset.index ?? "");
+}
+
 function meetsMinDistance(a, b) {
   const hGap = Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w));
   const vGap = Math.max(b.y - (a.y + a.h), a.y - (b.y + b.h));
@@ -129,14 +193,17 @@ function renderCovers(positions, onLoad) {
     const spec = document.createElement("div");
     spec.className = "spec";
 
-    const label = document.createElement("div");
-    label.className = "cover-filename";
-    label.textContent = filename;
+    const crownEl = document.createElement("div");
+    crownEl.className = "cover-crown";
+    crownEl.textContent = "👑";
+    crownEl.setAttribute("aria-hidden", "true");
+    const coverId = filename;
+    if (hasMyVote(coverId)) cover.classList.add("is-voted");
 
     cover.appendChild(img);
     cover.appendChild(shine);
     cover.appendChild(spec);
-    cover.appendChild(label);
+    cover.appendChild(crownEl);
 
     const tooltip = document.createElement("div");
     tooltip.className = "cover-tooltip";
@@ -146,7 +213,7 @@ function renderCovers(positions, onLoad) {
 
     cover.addEventListener("mouseenter", () => {
       tooltip.style.left = pos.x + COVER_W / 2 + "px";
-      tooltip.style.top = pos.y - 35 + "px";
+      tooltip.style.top = pos.y + COVER_H + 10 + "px";
       tooltip.style.display = "block";
     });
     cover.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
@@ -161,7 +228,7 @@ function renderCovers(positions, onLoad) {
       cover.classList.add("focused");
       tooltip.style.display = "block";
       tooltip.style.left = pos.x + COVER_W / 2 + "px";
-      tooltip.style.top = pos.y - 35 + "px";
+      tooltip.style.top = pos.y + COVER_H + 10 + "px";
       if (skipScrollOnFocus) {
         skipScrollOnFocus = false;
       } else {
@@ -730,13 +797,82 @@ function enableCover(cover) {
     cover.style.setProperty("--hyp", "0.25");
   });
 
+  let clickTimeout = null;
   cover.addEventListener("click", (e) => {
     if (moved || isPanning) return;
     e.preventDefault();
     e.stopPropagation();
-    if (cover.classList.contains("is-active")) closeActive();
-    else openActive(cover);
+    if (cover.classList.contains("is-active")) {
+      closeActive();
+      return;
+    }
+    if (clickTimeout) {
+      clearTimeout(clickTimeout);
+      clickTimeout = null;
+      toggleVote(cover);
+      return;
+    }
+    clickTimeout = setTimeout(() => {
+      clickTimeout = null;
+      openActive(cover);
+    }, 350);
   });
+}
+async function toggleVote(cover) {
+  const id = getCoverId(cover);
+  if (hasMyVote(id)) return; /* already voted for this one */
+  try {
+    await voteForCover(id);
+    refreshVoteState();
+    await updateLeaderboardUI();
+  } catch (err) {
+    console.error("Vote failed:", err);
+  }
+}
+function refreshVoteState() {
+  const current = getCurrentVote();
+  coverImages.forEach(({ img: c }) => {
+    const id = getCoverId(c);
+    if (id === current) {
+      c.classList.add("is-voted");
+    } else {
+      c.classList.remove("is-voted");
+    }
+  });
+}
+const validCoverIds = new Set(covers.map((p) => p.split("/").pop().replace(/\.(webp|jpg)$/i, "")));
+
+function scrollToCover(coverId) {
+  const entry = coverImages.find((e) => getCoverId(e.img) === coverId);
+  if (!entry) return;
+  const { position: pos } = entry;
+  viewport.scrollLeft = pos.x + COVER_W / 2 - viewport.clientWidth / 2;
+  viewport.scrollTop = pos.y + COVER_H / 2 - viewport.clientHeight / 2;
+  skipScrollOnFocus = true;
+  entry.img.focus({ preventScroll: true });
+}
+
+async function updateLeaderboardUI() {
+  const el = document.getElementById("leaderboard");
+  if (!el) return;
+  try {
+    const results = await getResults();
+    const withVotes = (results || []).filter(
+      (r) => (r.votes ?? r.count ?? 0) > 0 && validCoverIds.has(r.cover_id || r.id || "")
+    );
+    if (withVotes.length === 0) {
+      el.innerHTML = "";
+      return;
+    }
+    const sorted = [...withVotes].sort((a, b) => (b.votes ?? b.count ?? 0) - (a.votes ?? a.count ?? 0));
+    const top = sorted.slice(0, 3);
+    el.innerHTML = top.map((r) => {
+      const id = r.cover_id || r.id || "";
+      return `<div class="leaderboard-item" data-cover-id="${id}" role="button" tabindex="0"><span class="leaderboard-filename">${id}</span><span class="leaderboard-count">${r.votes ?? r.count ?? 0}</span></div>`;
+    }).join("");
+  } catch {
+    el.innerHTML = "";
+  }
 }
 
 /* -------------------------------------------------- */
@@ -807,5 +943,21 @@ viewport.scrollLeft = positions[lastIdx].x + COVER_W / 2 - viewport.clientWidth 
 viewport.scrollTop  = positions[lastIdx].y + COVER_H / 2 - viewport.clientHeight / 2;
 
 initZoom();
+updateLeaderboardUI();
+
+const leaderboardEl = document.getElementById("leaderboard");
+if (leaderboardEl) {
+  leaderboardEl.addEventListener("click", (e) => {
+    const item = e.target.closest(".leaderboard-item[data-cover-id]");
+    if (item) scrollToCover(item.dataset.coverId);
+  });
+  leaderboardEl.addEventListener("keydown", (e) => {
+    const item = e.target.closest(".leaderboard-item[data-cover-id]");
+    if (item && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      scrollToCover(item.dataset.coverId);
+    }
+  });
+}
 
 setTimeout(() => { minTimeElapsed = true; maybeHideLoader(); }, 10000);

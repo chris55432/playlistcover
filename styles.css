@@ -163,6 +163,8 @@ body{
 /* optional: slightly “wet” text rendering inside glass */
 #hud{
   color: rgba(26,26,26,.92);
+  font-size:12px;
+  font-family:inherit;
 }
 #hud .hint{
   color: rgba(26,26,26,.62);
@@ -188,17 +190,58 @@ body{
 }
 
 #hud .hint{
-  font-size:12px;
   color:var(--muted);
   margin-top:4px;
 }
 
-.coord-display{
-  font-size:11px;
-  color:var(--muted);
-  margin-top:8px;
+.leaderboard-title{
+  margin-top:12px;
   padding-top:8px;
+  padding-bottom:16px;
   border-top:1px solid rgba(26,26,26,.12);
+  color:var(--muted);
+}
+.leaderboard{
+  margin-top:4px;
+}
+.leaderboard:empty{
+  display:none;
+}
+.leaderboard-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:4px 0;
+  cursor:pointer;
+  border-radius:4px;
+  transition:background .15s ease;
+}
+.leaderboard-item:hover{
+  background:rgba(0,0,0,.06);
+}
+.leaderboard-filename{
+  color:var(--muted);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:140px;
+}
+.leaderboard-count{
+  color:#e74c3c;
+  flex-shrink:0;
+}
+.leaderboard-empty{
+  color:var(--muted);
+  font-style:italic;
+}
+
+.coord-display{
+  position:fixed;
+  top:20px;
+  right:20px;
+  z-index:99998;
+  color:var(--muted);
   font-variant-numeric:tabular-nums;
 }
 
@@ -254,7 +297,7 @@ body{
   position:absolute;
   width:280px;
   height:280px;
-  overflow:hidden;
+  overflow:visible;
   cursor:pointer;
   box-shadow:0 10px 30px rgba(22,22,22,.15);
   user-select:none;
@@ -270,9 +313,26 @@ body{
 
 .cover:focus,
 .cover.focused{
-  outline:2px solid var(--text);
-  outline-offset:2px;
+  outline:none;
   z-index:100;
+}
+
+.cover-crown{
+  position:absolute;
+  top:-52px;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:40px;
+  line-height:1;
+  z-index:5;
+  pointer-events:none;
+  opacity:0;
+}
+.cover.is-voted .cover-crown{
+  opacity:1;
+}
+.cover.is-active .cover-crown{
+  display:none;
 }
 
 .cover img{
@@ -466,35 +526,13 @@ body{
    RESPONSIVE
 ========================================= */
 
-/* filename label on top of cover - mobile only when focused */
-.cover-filename{
-  position:absolute;
-  top:0;
-  left:0;
-  right:0;
-  padding:8px 10px;
-  font-size:12px;
-  font-weight:600;
-  color:#fff;
-  text-align:center;
-  background:linear-gradient(to bottom, rgba(0,0,0,.75) 0%, rgba(0,0,0,.4) 70%, transparent 100%);
-  opacity:0;
-  pointer-events:none;
-  z-index:10;
-  transition:opacity .2s ease;
-}
-
 @media (max-width:600px){
   #hud{
-    top:30px;
-    left:50%;
+    top: 25px;  
+    left:30%;
     transform:translateX(-50%);
-    padding:20px 50px;
+    padding:20px 20px 20px 20px;
     max-width:calc(100vw - 12px);
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    text-align:center;
   }
   body.cover-active #hud{
     z-index:1;
@@ -503,18 +541,22 @@ body{
   .paper-dots{ background-size:180px 180px, 18px 18px; }
   #loader-screen{ background-size:180px 180px, 18px 18px; }
   .sound-logo{ height:30px; }
-  #hud .hint{ font-size:11px; }
-  .cover-filename{ display:none !important; }
+  .coord-display{
+    font-size: 14px;
+    top:auto;
+    right:auto;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%);
+  }
 }
 
-@media (min-width:601px){
-  .cover-filename{ display:none; }
-}
+
 
 @media (max-height:500px){
   #hud{ top:6px; padding:6px 8px; }
   .sound-logo{ height:26px; }
-  #hud .hint{ font-size:10px; margin-top:2px; }
+  #hud .hint{ margin-top:2px; }
 }
 
 
