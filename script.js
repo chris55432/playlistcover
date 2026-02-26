@@ -862,8 +862,12 @@ async function updateLeaderboardUI() {
     );
     if (withVotes.length === 0) {
       el.innerHTML = "";
+      const toggle = document.getElementById("leaderboard-toggle");
+      if (toggle) toggle.style.display = "none";
       return;
     }
+    const toggle = document.getElementById("leaderboard-toggle");
+    if (toggle) toggle.style.display = "";
     const sorted = [...withVotes].sort((a, b) => (b.votes ?? b.count ?? 0) - (a.votes ?? a.count ?? 0));
     const top = sorted.slice(0, 3);
     el.innerHTML = top.map((r) => {
@@ -943,7 +947,30 @@ viewport.scrollLeft = positions[lastIdx].x + COVER_W / 2 - viewport.clientWidth 
 viewport.scrollTop  = positions[lastIdx].y + COVER_H / 2 - viewport.clientHeight / 2;
 
 initZoom();
+
+const zoomInBtn = document.getElementById("zoom-in");
+const zoomOutBtn = document.getElementById("zoom-out");
+if (zoomInBtn && zoomOutBtn) {
+  const doZoom = (delta) => {
+    const cx = viewport.clientWidth / 2;
+    const cy = viewport.clientHeight / 2;
+    applyZoom(currentZoom + delta, cx, cy);
+  };
+  zoomInBtn.addEventListener("click", () => doZoom(0.15));
+  zoomOutBtn.addEventListener("click", () => doZoom(-0.15));
+}
+
 updateLeaderboardUI();
+
+const leaderboardSection = document.querySelector(".leaderboard-section");
+const leaderboardToggle = document.getElementById("leaderboard-toggle");
+if (leaderboardSection && leaderboardToggle) {
+  leaderboardToggle.addEventListener("click", () => {
+    const collapsed = leaderboardSection.classList.toggle("is-collapsed");
+    leaderboardToggle.setAttribute("aria-label", collapsed ? "Expand leaderboard" : "Collapse leaderboard");
+    leaderboardToggle.setAttribute("aria-expanded", !collapsed);
+  });
+}
 
 const leaderboardEl = document.getElementById("leaderboard");
 if (leaderboardEl) {

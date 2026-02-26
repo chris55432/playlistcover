@@ -35,8 +35,20 @@
 
     <div class="hint">Double click to vote ur fav cover</div>
     <div class="hint">Click to activate Hologram</div>
-    <div class="leaderboard-title">TOP THREE COVERS</div>
-    <div id="leaderboard" class="leaderboard" aria-label="Top voted"></div>
+    <div class="leaderboard-section">
+      <div class="leaderboard-title">TOP THREE COVERS</div>
+      <div id="leaderboard" class="leaderboard" aria-label="Top voted"></div>
+      <button type="button" class="leaderboard-toggle" id="leaderboard-toggle" aria-label="Collapse leaderboard" aria-expanded="true">
+        <svg class="leaderboard-toggle-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <path d="M7 14l5-5 5 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="zoom-controls" class="zoom-controls" aria-label="Zoom">
+    <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+    <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
   </div>
 
   <div id="coord-display" class="coord-display" aria-live="polite">x: 0 · y: 0</div>

@@ -194,15 +194,37 @@ body{
   margin-top:4px;
 }
 
+.leaderboard-section{
+  position:relative;
+}
 .leaderboard-title{
   margin-top:12px;
   padding-top:8px;
-  padding-bottom:16px;
+  padding-bottom:4px;
   border-top:1px solid rgba(26,26,26,.12);
   color:var(--muted);
 }
 .leaderboard{
   margin-top:4px;
+}
+.leaderboard-toggle{
+  display:none;
+  width:100%;
+  margin-top:8px;
+  border:none;
+  background:transparent;
+  color:var(--muted);
+  cursor:pointer;
+  touch-action:manipulation;
+  justify-content:center;
+  align-items:center;
+}
+.leaderboard-toggle-icon{
+  display:block;
+  transition:transform .2s ease;
+}
+.leaderboard-section.is-collapsed .leaderboard-toggle-icon{
+  transform:rotate(180deg);
 }
 .leaderboard:empty{
   display:none;
@@ -243,6 +265,44 @@ body{
   z-index:99998;
   color:var(--muted);
   font-variant-numeric:tabular-nums;
+}
+
+.zoom-controls{
+  display:none;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  position:fixed;
+  bottom:60px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:99998;
+  gap:32px;
+}
+.zoom-controls button{
+  width:48px;
+  height:48px;
+  border:none;
+  border-radius:50%;
+  touch-action:manipulation;
+  background:rgba(255,255,255,.14);
+  backdrop-filter:blur(18px) saturate(170%);
+  -webkit-backdrop-filter:blur(18px) saturate(170%);
+  border:1px solid rgba(255,255,255,.38);
+  box-shadow:0 18px 45px rgba(0,0,0,.10), 0 2px 10px rgba(0,0,0,.06);
+  color:rgba(26,26,26,.92);
+  font-size:20px;
+  font-family:inherit;
+  font-weight:400;
+  line-height:1;
+  cursor:pointer;
+  transition:opacity .15s ease;
+}
+.zoom-controls button:hover{
+  opacity:.85;
+}
+.zoom-controls button:active{
+  opacity:.7;
 }
 
 /* =========================================
@@ -531,7 +591,7 @@ body{
     top: 15px;  
     left:30%;
     transform:translateX(-50%);
-    padding:20px 20px 20px 20px;
+    padding:20px 20px 10px 20px;
     max-width:calc(100vw - 12px);
   }
   body.cover-active #hud{
@@ -548,6 +608,19 @@ body{
     bottom:20px;
     left:50%;
     transform:translateX(-50%);
+  }
+  .zoom-controls{
+    display:flex;
+  }
+  .leaderboard-toggle{
+    display:flex;
+  }
+  .leaderboard-section.is-collapsed .leaderboard-title,
+  .leaderboard-section.is-collapsed .leaderboard{
+    display:none;
+  }
+  .leaderboard-section.is-collapsed .leaderboard-toggle{
+    margin-top:4px;
   }
 }
 
