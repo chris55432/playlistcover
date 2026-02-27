@@ -645,6 +645,9 @@ body{
   .zoom-controls{
     display:flex;
   }
+  body.cover-active .zoom-controls{
+    z-index:8999;
+  }
   .leaderboard-toggle{
     display:flex;
   }
