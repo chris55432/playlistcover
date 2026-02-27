@@ -202,17 +202,29 @@ function renderCovers(positions, onLoad) {
     const spec = document.createElement("div");
     spec.className = "spec";
 
+    const coverId = filename;
+    if (hasMyVote(coverId)) cover.classList.add("is-voted");
+
+    const voteStackEl = document.createElement("div");
+    voteStackEl.className = "cover-vote-stack";
+
     const crownEl = document.createElement("div");
     crownEl.className = "cover-crown";
     crownEl.textContent = "👑";
     crownEl.setAttribute("aria-hidden", "true");
-    const coverId = filename;
-    if (hasMyVote(coverId)) cover.classList.add("is-voted");
+
+    const voteCountEl = document.createElement("span");
+    voteCountEl.className = "cover-vote-count";
+    voteCountEl.setAttribute("aria-label", "Vote count");
+    voteCountEl.textContent = "0";
+
+    voteStackEl.appendChild(crownEl);
+    voteStackEl.appendChild(voteCountEl);
 
     cover.appendChild(img);
     cover.appendChild(shine);
     cover.appendChild(spec);
-    cover.appendChild(crownEl);
+    cover.appendChild(voteStackEl);
 
     const tooltip = document.createElement("div");
     tooltip.className = "cover-tooltip";
@@ -271,7 +283,7 @@ function renderCovers(positions, onLoad) {
     });
 
     world.appendChild(cover);
-    coverImages.push({ img: cover, position: pos, index: i, tooltip });
+    coverImages.push({ img: cover, position: pos, index: i, tooltip, voteCountEl });
   });
 }
 
@@ -864,11 +876,31 @@ function scrollToCover(coverId) {
   entry.img.focus({ preventScroll: true });
 }
 
+function updateCoverVoteCounts(results) {
+  const voteMap = new Map();
+  (results || []).forEach((r) => {
+    const id = r.cover_id || r.id || "";
+    if (validCoverIds.has(id)) {
+      voteMap.set(id, r.votes ?? r.count ?? 0);
+    }
+  });
+  coverImages.forEach(({ img: c, voteCountEl }) => {
+    if (voteCountEl) {
+      const id = getCoverId(c);
+      const count = voteMap.get(id) ?? 0;
+      voteCountEl.textContent = String(count);
+      voteCountEl.classList.toggle("has-votes", count > 0);
+    }
+  });
+}
+
 async function updateLeaderboardUI() {
   const el = document.getElementById("leaderboard");
-  if (!el) return;
   try {
     const results = await getResults();
+    updateCoverVoteCounts(results);
+
+    if (!el) return;
     const withVotes = (results || []).filter(
       (r) => (r.votes ?? r.count ?? 0) > 0 && validCoverIds.has(r.cover_id || r.id || "")
     );
@@ -887,7 +919,7 @@ async function updateLeaderboardUI() {
       return `<div class="leaderboard-item" data-cover-id="${id}" role="button" tabindex="0"><span class="leaderboard-filename">${id}</span><span class="leaderboard-count">${r.votes ?? r.count ?? 0}</span></div>`;
     }).join("");
   } catch {
-    el.innerHTML = "";
+    if (el) el.innerHTML = "";
   }
 }
 
