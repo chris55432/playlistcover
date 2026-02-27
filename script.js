@@ -138,9 +138,17 @@ const LOAD_THRESHOLD = 0.5;
 let minTimeElapsed = false;
 
 function maybeHideLoader() {
-  if (!loaderScreen || !minTimeElapsed) return;
+  if (!loaderScreen) return;
+  if (!minTimeElapsed) return;
   if (!allLoaderMessagesShown) return;
-  if (imagesLoadedCount < totalCoverImages * LOAD_THRESHOLD) return;
+  const threshold = totalCoverImages > 0 ? totalCoverImages * LOAD_THRESHOLD : 0;
+  if (imagesLoadedCount < threshold) return;
+  if (loaderMsgInterval) { clearInterval(loaderMsgInterval); loaderMsgInterval = null; }
+  loaderScreen.classList.add("hidden");
+}
+
+function forceHideLoader() {
+  if (!loaderScreen) return;
   if (loaderMsgInterval) { clearInterval(loaderMsgInterval); loaderMsgInterval = null; }
   loaderScreen.classList.add("hidden");
 }
@@ -177,7 +185,8 @@ function renderCovers(positions, onLoad) {
     };
     img.addEventListener("load", countLoad);
     img.addEventListener("error", () => {
-      if (img.src !== fullPath) {
+      if (!img.dataset.triedFull) {
+        img.dataset.triedFull = "1";
         img.src = fullPath;
         img.addEventListener("load", countLoad);
       } else {
@@ -991,3 +1000,5 @@ if (leaderboardEl) {
 }
 
 setTimeout(() => { minTimeElapsed = true; maybeHideLoader(); }, 10000);
+/* Force-hide loader after 18s to prevent being stuck if images fail to load */
+setTimeout(forceHideLoader, 18000);
