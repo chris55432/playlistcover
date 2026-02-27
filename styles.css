@@ -280,6 +280,9 @@ body{
   gap:32px;
 }
 .zoom-controls button{
+  display:flex;
+  align-items:center;
+  justify-content:center;
   width:48px;
   height:48px;
   border:none;
@@ -297,6 +300,12 @@ body{
   line-height:1;
   cursor:pointer;
   transition:opacity .15s ease;
+}
+.zoom-controls .zoom-icon{
+  display:block;
+  object-fit:contain;
+  filter:brightness(0) saturate(100%);
+  opacity:.92;
 }
 .zoom-controls button:hover{
   opacity:.85;
