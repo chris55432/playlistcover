@@ -22,7 +22,8 @@ const covers = [
   "covers/2025_03_MAR.webp", "covers/2025_04_APL.webp", "covers/2025_05_MAY.webp",
   "covers/2025_06_JUN.webp", "covers/2025_07_JLY.webp", "covers/2025_08_AUG.webp",
   "covers/2025_09_SEP.webp", "covers/2025_10_OCT.webp", "covers/2025_11_NOV.webp",
-  "covers/2025_12_DEC.webp", "covers/2026_01_JAN.webp", "covers/2026_02_FEB.webp"
+  "covers/2025_12_DEC.webp", "covers/2026_01_JAN.webp", "covers/2026_02_FEB.webp",
+  "covers/2026_03_MAR.webp"
 ];
 
 const WORLD_W = 8000;
@@ -138,17 +139,9 @@ const LOAD_THRESHOLD = 0.5;
 let minTimeElapsed = false;
 
 function maybeHideLoader() {
-  if (!loaderScreen) return;
-  if (!minTimeElapsed) return;
+  if (!loaderScreen || !minTimeElapsed) return;
   if (!allLoaderMessagesShown) return;
-  const threshold = totalCoverImages > 0 ? totalCoverImages * LOAD_THRESHOLD : 0;
-  if (imagesLoadedCount < threshold) return;
-  if (loaderMsgInterval) { clearInterval(loaderMsgInterval); loaderMsgInterval = null; }
-  loaderScreen.classList.add("hidden");
-}
-
-function forceHideLoader() {
-  if (!loaderScreen) return;
+  if (imagesLoadedCount < totalCoverImages * LOAD_THRESHOLD) return;
   if (loaderMsgInterval) { clearInterval(loaderMsgInterval); loaderMsgInterval = null; }
   loaderScreen.classList.add("hidden");
 }
@@ -185,8 +178,7 @@ function renderCovers(positions, onLoad) {
     };
     img.addEventListener("load", countLoad);
     img.addEventListener("error", () => {
-      if (!img.dataset.triedFull) {
-        img.dataset.triedFull = "1";
+      if (img.src !== fullPath) {
         img.src = fullPath;
         img.addEventListener("load", countLoad);
       } else {
@@ -202,29 +194,17 @@ function renderCovers(positions, onLoad) {
     const spec = document.createElement("div");
     spec.className = "spec";
 
-    const coverId = filename;
-    if (hasMyVote(coverId)) cover.classList.add("is-voted");
-
-    const voteStackEl = document.createElement("div");
-    voteStackEl.className = "cover-vote-stack";
-
     const crownEl = document.createElement("div");
     crownEl.className = "cover-crown";
     crownEl.textContent = "👑";
     crownEl.setAttribute("aria-hidden", "true");
-
-    const voteCountEl = document.createElement("span");
-    voteCountEl.className = "cover-vote-count";
-    voteCountEl.setAttribute("aria-label", "Vote count");
-    voteCountEl.textContent = "0";
-
-    voteStackEl.appendChild(crownEl);
-    voteStackEl.appendChild(voteCountEl);
+    const coverId = filename;
+    if (hasMyVote(coverId)) cover.classList.add("is-voted");
 
     cover.appendChild(img);
     cover.appendChild(shine);
     cover.appendChild(spec);
-    cover.appendChild(voteStackEl);
+    cover.appendChild(crownEl);
 
     const tooltip = document.createElement("div");
     tooltip.className = "cover-tooltip";
@@ -283,7 +263,7 @@ function renderCovers(positions, onLoad) {
     });
 
     world.appendChild(cover);
-    coverImages.push({ img: cover, position: pos, index: i, tooltip, voteCountEl });
+    coverImages.push({ img: cover, position: pos, index: i, tooltip });
   });
 }
 
@@ -876,31 +856,11 @@ function scrollToCover(coverId) {
   entry.img.focus({ preventScroll: true });
 }
 
-function updateCoverVoteCounts(results) {
-  const voteMap = new Map();
-  (results || []).forEach((r) => {
-    const id = r.cover_id || r.id || "";
-    if (validCoverIds.has(id)) {
-      voteMap.set(id, r.votes ?? r.count ?? 0);
-    }
-  });
-  coverImages.forEach(({ img: c, voteCountEl }) => {
-    if (voteCountEl) {
-      const id = getCoverId(c);
-      const count = voteMap.get(id) ?? 0;
-      voteCountEl.textContent = String(count);
-      voteCountEl.classList.toggle("has-votes", count > 0);
-    }
-  });
-}
-
 async function updateLeaderboardUI() {
   const el = document.getElementById("leaderboard");
+  if (!el) return;
   try {
     const results = await getResults();
-    updateCoverVoteCounts(results);
-
-    if (!el) return;
     const withVotes = (results || []).filter(
       (r) => (r.votes ?? r.count ?? 0) > 0 && validCoverIds.has(r.cover_id || r.id || "")
     );
@@ -919,7 +879,7 @@ async function updateLeaderboardUI() {
       return `<div class="leaderboard-item" data-cover-id="${id}" role="button" tabindex="0"><span class="leaderboard-filename">${id}</span><span class="leaderboard-count">${r.votes ?? r.count ?? 0}</span></div>`;
     }).join("");
   } catch {
-    if (el) el.innerHTML = "";
+    el.innerHTML = "";
   }
 }
 
@@ -1032,5 +992,3 @@ if (leaderboardEl) {
 }
 
 setTimeout(() => { minTimeElapsed = true; maybeHideLoader(); }, 10000);
-/* Force-hide loader after 18s to prevent being stuck if images fail to load */
-setTimeout(forceHideLoader, 18000);
