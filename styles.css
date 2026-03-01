@@ -343,6 +343,8 @@ body{
   position:relative;
   width:8000px;
   height:8000px;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
 /* =========================================

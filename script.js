@@ -194,19 +194,29 @@ function renderCovers(positions, onLoad) {
     const spec = document.createElement("div");
     spec.className = "spec";
 
+    const voteStack = document.createElement("div");
+    voteStack.className = "cover-vote-stack";
+
     const crownEl = document.createElement("div");
     crownEl.className = "cover-crown";
     crownEl.textContent = "👑";
     crownEl.setAttribute("aria-hidden", "true");
+
+    const countEl = document.createElement("div");
+    countEl.className = "cover-vote-count";
+    countEl.textContent = "0";
+
+    voteStack.appendChild(crownEl);
+    voteStack.appendChild(countEl);
+
     const coverId = filename;
     if (hasMyVote(coverId)) cover.classList.add("is-voted");
 
     cover.appendChild(img);
     cover.appendChild(shine);
     cover.appendChild(spec);
-    cover.appendChild(crownEl);
-
-    const tooltip = document.createElement("div");
+    cover.appendChild(voteStack);
+const tooltip = document.createElement("div");
     tooltip.className = "cover-tooltip";
     tooltip.textContent = filename;
     tooltip.style.display = "none";
@@ -354,67 +364,211 @@ const ZOOM_MIN = 1;      /* viewport = 100%, can't zoom in further */
 const ZOOM_MAX = 0.35;   /* max zoom out = 35% = see ~3x more world */
 let currentZoom = 1;
 
+// Smooth zoom animation state
+let targetZoom = 1;
+let zoomAnimRAF = 0;
+
+// anchor (screen coords inside viewport) + the world point under that anchor
+let zoomAnchorX = 0;
+let zoomAnchorY = 0;
+let anchorWorldX = 0;
+let anchorWorldY = 0;
+
+/**
+ * Snap zoom immediately (keeps the world point under centerX/centerY pinned).
+ * Uses transform: scale() (GPU) and clamps scroll to scaled world bounds.
+ */
 function applyZoom(newZoom, centerX, centerY) {
   const oldZoom = currentZoom;
   newZoom = Math.max(ZOOM_MAX, Math.min(ZOOM_MIN, newZoom));
   currentZoom = newZoom;
+  targetZoom = newZoom;
 
-  const worldX = (centerX + viewport.scrollLeft) / oldZoom;
-  const worldY = (centerY + viewport.scrollTop) / oldZoom;
+  // world coord under the anchor (cursor / pinch center)
+  const worldX = (viewport.scrollLeft + centerX) / oldZoom;
+  const worldY = (viewport.scrollTop + centerY) / oldZoom;
 
-  world.style.zoom = newZoom;
+  world.style.transformOrigin = "0 0";
+  world.style.transform = `scale(${newZoom})`;
 
   viewport.scrollLeft = worldX * newZoom - centerX;
-  viewport.scrollTop = worldY * newZoom - centerY;
+  viewport.scrollTop  = worldY * newZoom - centerY;
+
+  const maxLeft = Math.max(0, WORLD_W * newZoom - viewport.clientWidth);
+  const maxTop  = Math.max(0, WORLD_H * newZoom - viewport.clientHeight);
+  viewport.scrollLeft = clamp(viewport.scrollLeft, 0, maxLeft);
+  viewport.scrollTop  = clamp(viewport.scrollTop,  0, maxTop);
+}
+
+/**
+ * Set a new target zoom and animate toward it while keeping the same
+ * world point pinned under the same on-screen anchor (Apple Photos feel).
+ */
+function setZoomTarget(newTarget, centerX, centerY) {
+  newTarget = Math.max(ZOOM_MAX, Math.min(ZOOM_MIN, newTarget));
+  targetZoom = newTarget;
+
+  zoomAnchorX = centerX;
+  zoomAnchorY = centerY;
+
+  // lock the world point under the anchor at the time the target updates
+  anchorWorldX = (viewport.scrollLeft + centerX) / currentZoom;
+  anchorWorldY = (viewport.scrollTop + centerY) / currentZoom;
+
+  startZoomAnimation();
+}
+
+function startZoomAnimation() {
+  if (zoomAnimRAF) return;
+
+  const step = () => {
+    zoomAnimRAF = 0;
+
+    const diff = targetZoom - currentZoom;
+    if (Math.abs(diff) < 0.0005) {
+      applyZoom(targetZoom, zoomAnchorX, zoomAnchorY);
+      return;
+    }
+
+    // smoothing factor: higher = snappier, lower = softer
+    const t = 0.20;
+    const nextZoom = currentZoom + diff * t;
+
+    const newZoom = Math.max(ZOOM_MAX, Math.min(ZOOM_MIN, nextZoom));
+    currentZoom = newZoom;
+
+    world.style.transformOrigin = "0 0";
+    world.style.transform = `scale(${newZoom})`;
+
+    // keep the locked world point under the locked anchor
+    viewport.scrollLeft = anchorWorldX * newZoom - zoomAnchorX;
+    viewport.scrollTop  = anchorWorldY * newZoom - zoomAnchorY;
+
+    const maxLeft = Math.max(0, WORLD_W * newZoom - viewport.clientWidth);
+    const maxTop  = Math.max(0, WORLD_H * newZoom - viewport.clientHeight);
+    viewport.scrollLeft = clamp(viewport.scrollLeft, 0, maxLeft);
+    viewport.scrollTop  = clamp(viewport.scrollTop,  0, maxTop);
+
+    zoomAnimRAF = requestAnimationFrame(step);
+  };
+
+  zoomAnimRAF = requestAnimationFrame(step);
 }
 
 function initZoom() {
-  world.style.zoom = 1;
+  world.style.transformOrigin = "0 0";
+  world.style.transform = "scale(1)";
+  currentZoom = 1;
+  targetZoom = 1;
 
   /* Trackpad pinch (Ctrl+wheel) */
   viewport.addEventListener("wheel", (e) => {
     if (activeCover) { closeActive(); e.preventDefault(); return; }
+
+    // pinch-zoom gesture (trackpad) on most browsers is delivered as ctrl/meta + wheel
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
-      const cx = viewport.clientWidth / 2;
-      const cy = viewport.clientHeight / 2;
-      const delta = -e.deltaY * 0.01;
-      applyZoom(currentZoom + delta, cx, cy);
+
+      const rect = viewport.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+
+      // Exponential feels more like native photo zoom than linear deltas
+      const factor = Math.exp(-e.deltaY * 0.002);
+      setZoomTarget(targetZoom * factor, cx, cy);
       return;
     }
+
+    // pan
     e.preventDefault();
     viewport.scrollLeft += e.deltaX;
-    viewport.scrollTop += e.deltaY;
+    viewport.scrollTop  += e.deltaY;
   }, { passive: false });
 
-  /* Mobile pinch */
-  let pinchStartDist = 0, pinchStartZoom = 1, pinchCenterX = 0, pinchCenterY = 0;
+  /* Mobile pinch (Apple Photos-style: track 2 fingers, update center continuously) */
+  let pinchId1 = null;
+  let pinchId2 = null;
+  let pinchStartDist = 0;
+  let pinchStartZoom = 1;
+
+  // rAF throttle for touchmove
+  let pinchPending = false;
+  let pinchCx = 0, pinchCy = 0, pinchScale = 1;
+
+  function getTouchById(touchList, id) {
+    for (let i = 0; i < touchList.length; i++) {
+      if (touchList[i].identifier === id) return touchList[i];
+    }
+    return null;
+  }
+
+  function schedulePinchApply() {
+    if (pinchPending) return;
+    pinchPending = true;
+    requestAnimationFrame(() => {
+      pinchPending = false;
+      setZoomTarget(pinchStartZoom * pinchScale, pinchCx, pinchCy);
+    });
+  }
 
   viewport.addEventListener("touchstart", (e) => {
     if (e.touches.length === 2) {
-      const dx = e.touches[1].clientX - e.touches[0].clientX;
-      const dy = e.touches[1].clientY - e.touches[0].clientY;
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      pinchId1 = t1.identifier;
+      pinchId2 = t2.identifier;
+
+      const dx = t2.clientX - t1.clientX;
+      const dy = t2.clientY - t1.clientY;
       pinchStartDist = Math.hypot(dx, dy);
-      pinchStartZoom = currentZoom;
+      pinchStartZoom = targetZoom; // start from current target for continuity
+
       const rect = viewport.getBoundingClientRect();
-      pinchCenterX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
-      pinchCenterY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+      pinchCx = ((t1.clientX + t2.clientX) / 2) - rect.left;
+      pinchCy = ((t1.clientY + t2.clientY) / 2) - rect.top;
+      pinchScale = 1;
+
+      // lock anchor world point immediately
+      setZoomTarget(pinchStartZoom, pinchCx, pinchCy);
     }
   }, { passive: true });
 
   viewport.addEventListener("touchmove", (e) => {
-    if (e.touches.length === 2 && pinchStartDist > 0) {
-      e.preventDefault();
-      const dx = e.touches[1].clientX - e.touches[0].clientX;
-      const dy = e.touches[1].clientY - e.touches[0].clientY;
-      const dist = Math.hypot(dx, dy);
-      const scale = dist / pinchStartDist;
-      applyZoom(pinchStartZoom * scale, pinchCenterX, pinchCenterY);
+    if (pinchId1 == null || pinchId2 == null) return;
+
+    const t1 = getTouchById(e.touches, pinchId1);
+    const t2 = getTouchById(e.touches, pinchId2);
+    if (!t1 || !t2) return;
+
+    e.preventDefault();
+
+    const dx = t2.clientX - t1.clientX;
+    const dy = t2.clientY - t1.clientY;
+    const dist = Math.hypot(dx, dy);
+
+    if (pinchStartDist > 0) {
+      pinchScale = dist / pinchStartDist;
     }
+
+    const rect = viewport.getBoundingClientRect();
+    pinchCx = ((t1.clientX + t2.clientX) / 2) - rect.left;
+    pinchCy = ((t1.clientY + t2.clientY) / 2) - rect.top;
+
+    schedulePinchApply();
   }, { passive: false });
 
   viewport.addEventListener("touchend", (e) => {
-    if (e.touches.length < 2) pinchStartDist = 0;
+    if (e.touches.length < 2) {
+      pinchId1 = null;
+      pinchId2 = null;
+      pinchStartDist = 0;
+    }
+  }, { passive: true });
+
+  viewport.addEventListener("touchcancel", () => {
+    pinchId1 = null;
+    pinchId2 = null;
+    pinchStartDist = 0;
   }, { passive: true });
 }
 
@@ -861,6 +1015,23 @@ async function updateLeaderboardUI() {
   if (!el) return;
   try {
     const results = await getResults();
+
+    // --- update per-cover global vote badges ---
+    const voteMap = new Map();
+    (results || []).forEach((r) => {
+      const id = r.cover_id || r.id || "";
+      const n = (r.votes ?? r.count ?? 0) | 0;
+      if (id) voteMap.set(id, n);
+    });
+
+    coverImages.forEach(({ img: cover }) => {
+      const id = getCoverId(cover);
+      const n = voteMap.get(id) ?? 0;
+      const badge = cover.querySelector(".cover-vote-count");
+      if (!badge) return;
+      badge.textContent = String(n);
+      badge.classList.toggle("has-votes", n > 0);
+    });
     const withVotes = (results || []).filter(
       (r) => (r.votes ?? r.count ?? 0) > 0 && validCoverIds.has(r.cover_id || r.id || "")
     );
@@ -879,6 +1050,13 @@ async function updateLeaderboardUI() {
       return `<div class="leaderboard-item" data-cover-id="${id}" role="button" tabindex="0"><span class="leaderboard-filename">${id}</span><span class="leaderboard-count">${r.votes ?? r.count ?? 0}</span></div>`;
     }).join("");
   } catch {
+    // If results endpoint fails, clear per-cover badges (avoid stale numbers)
+    coverImages.forEach(({ img: cover }) => {
+      const badge = cover.querySelector(".cover-vote-count");
+      if (!badge) return;
+      badge.textContent = "0";
+      badge.classList.remove("has-votes");
+    });
     el.innerHTML = "";
   }
 }
