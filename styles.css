@@ -343,8 +343,6 @@ body{
   position:relative;
   width:8000px;
   height:8000px;
-  transform-origin: 0 0;
-  will-change: transform;
 }
 
 /* =========================================
@@ -444,6 +442,30 @@ body{
   transition:opacity .3s ease;
 }
 
+/* Full-res clarity in active/enlarged mode - render at 2x and scale down for sharper tilt */
+.cover.is-active img{
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:200%;
+  height:200%;
+  margin-left:-100%;
+  margin-top:-100%;
+  object-fit:cover;
+  object-position:center;
+  image-rendering: auto;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0) scale(0.5);
+  transform-origin: center center;
+}
+
+/* While swapping from thumb -> full-res, avoid “pixelated” look */
+.cover.hires-loading img{
+  image-rendering: auto !important;
+}
+
+
 /* =========================================
    TOOLTIP
 ========================================= */
@@ -518,8 +540,9 @@ body{
 
 .cover.is-active{
   z-index:9501;
-  overflow:visible;
+  overflow:hidden;
   transform-style:preserve-3d;
+  transform-origin:center center;
   perspective: 900px;
   will-change:transform;
   box-shadow:0 35px 95px rgba(0,0,0,.45);
